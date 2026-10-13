@@ -2309,6 +2309,7 @@ async function aiRequest(body){
   }
   let tok='';try{tok=await fbAuth.currentUser.getIdToken();}catch{}
   return fetch(API_PROXY_URL.replace(/\/$/,''),{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(body)});
+}
 function saveApiKey(){
   const v=document.getElementById('api-key-input').value.trim();
   const st=document.getElementById('apikey-status');
