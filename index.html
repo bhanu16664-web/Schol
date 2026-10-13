@@ -2308,7 +2308,7 @@ async function aiRequest(body){
     return fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':'https://nova-ai.app','X-Title':'SCHOL AI'},body:JSON.stringify(body)});
   }
   let tok='';try{tok=await fbAuth.currentUser.getIdToken();}catch{}
-  return fetch(API_PROXY_URL.replace(/\/$/,'')+'/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(body)});
+  return fetch(API_PROXY_URL.replace(/\/$/,''),,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(body)});
 }
 function saveApiKey(){
   const v=document.getElementById('api-key-input').value.trim();
