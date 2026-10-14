@@ -3653,14 +3653,38 @@ async function _callApiAndStream(data,text,atts,searchContext,searchItems,vision
       });
     };
     try{
-      while(true){
-        const{value,done}=await _currentReader.read();if(done)break;
-        for(const line of decoder.decode(value,{stream:true}).split('\n')){
-          if(!line.startsWith('data: '))continue;
-          const raw=line.slice(6).trim();if(raw==='[DONE]')break;
-          try{const d=JSON.parse(raw).choices?.[0]?.delta?.content||'';if(d){fullText+=d;scheduleRender();}}catch{}
+      // SSE events may be split across network chunks, so keep an unfinished line.
+      let sseBuffer='';
+      let streamDone=false;
+      const processSseLine=(line)=>{
+        if(!line.startsWith('data:'))return;
+        const raw=line.slice(5).trim();
+        if(!raw)return;
+        if(raw==='[DONE]'){streamDone=true;return;}
+        try{
+          const packet=JSON.parse(raw);
+          const delta=packet.choices?.[0]?.delta?.content;
+          if(typeof delta==='string'&&delta){fullText+=delta;scheduleRender();}
+          const providerError=packet.error?.message;
+          if(providerError&&!fullText)throw new Error(providerError);
+        }catch(parseErr){
+          if(parseErr instanceof SyntaxError)return;
+          throw parseErr;
         }
+      };
+      while(true){
+        const{value,done}=await _currentReader.read();
+        sseBuffer+=decoder.decode(value||new Uint8Array(),{stream:!done});
+        const linesInBuffer=sseBuffer.split(/\r?\n/);
+        sseBuffer=linesInBuffer.pop()||'';
+        for(const line of linesInBuffer){
+          processSseLine(line);
+          if(streamDone)break;
+        }
+        if(streamDone||done)break;
       }
+      if(sseBuffer.trim())processSseLine(sseBuffer.trim());
+      if(!fullText)throw new Error('The AI service returned an empty response. Check the backend logs and API provider response.');
     }catch(readErr){
       // Stream was cancelled via stopGeneration — that's fine, save whatever we got
       if(!fullText)throw readErr;
